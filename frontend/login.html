@@ -9,15 +9,35 @@
 
     <h2>Secure User Login</h2>
 
-    <form>
+    <form onsubmit="return validateLogin()">
         <label>Username:</label><br>
-        <input type="text" id="username" required><br><br>
+        <input type="text" id="username"><br><br>
 
         <label>Password:</label><br>
-        <input type="password" id="password" required><br><br>
+        <input type="password" id="password"><br><br>
 
         <button type="submit">Login</button>
     </form>
+
+    <script>
+        function validateLogin() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            if (username === "" || password === "") {
+                alert("Username and password are required.");
+                return false;
+            }
+
+            if (password.length < 6) {
+                alert("Password must contain at least 6 characters.");
+                return false;
+            }
+
+            alert("Login details validated successfully.");
+            return false;
+        }
+    </script>
 
 </body>
 </html>
