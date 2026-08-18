@@ -18,6 +18,7 @@
 
     <button onclick="manageUsers()">Manage Users</button>
     <button onclick="manageVideos()">Manage Videos</button>
+    <button onclick="refreshDashboard()">Refresh Dashboard</button>
 
     <p id="message"></p>
 
@@ -30,6 +31,11 @@
         function manageVideos() {
             document.getElementById("message").innerHTML =
                 "Video management opened.";
+        }
+
+        function refreshDashboard() {
+            document.getElementById("message").innerHTML =
+                "Dashboard refreshed successfully.";
         }
     </script>
 
