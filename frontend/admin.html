@@ -14,16 +14,22 @@
     <p>Total Videos: <span id="videos">25</span></p>
     <p>Active Streams: <span id="streams">8</span></p>
 
-    <br>
+    <h3>Admin Controls</h3>
 
-    <button onclick="refreshDashboard()">Refresh Dashboard</button>
+    <button onclick="manageUsers()">Manage Users</button>
+    <button onclick="manageVideos()">Manage Videos</button>
 
     <p id="message"></p>
 
     <script>
-        function refreshDashboard() {
+        function manageUsers() {
             document.getElementById("message").innerHTML =
-                "Dashboard updated successfully.";
+                "User management opened.";
+        }
+
+        function manageVideos() {
+            document.getElementById("message").innerHTML =
+                "Video management opened.";
         }
     </script>
 
