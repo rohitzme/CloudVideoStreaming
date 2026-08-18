@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cloud Video Streaming</title>
+</head>
+
+<body>
+
+    <h2>Cloud Video Streaming</h2>
+
+    <h3>Watch Video</h3>
+
+    <video width="640" controls>
+        <source src="sample.mp4" type="video/mp4">
+        Your browser does not support video playback.
+    </video>
+
+    <br><br>
+
+    <button onclick="playVideo()">Play</button>
+    <button onclick="pauseVideo()">Pause</button>
+
+    <p id="status">Video ready to play.</p>
+
+    <script>
+        let video = document.querySelector("video");
+        let status = document.getElementById("status");
+
+        function playVideo() {
+            video.play();
+            status.innerHTML = "Video is playing.";
+        }
+
+        function pauseVideo() {
+            video.pause();
+            status.innerHTML = "Video is paused.";
+        }
+    </script>
+
+</body>
+</html>
