@@ -7,12 +7,30 @@
 
     <h2>Upload Video</h2>
 
-    <form>
+    <form onsubmit="return validateVideo()">
         <label>Select Video:</label><br><br>
-        <input type="file" accept="video/*"><br><br>
+
+        <input type="file" id="video" accept="video/*"><br><br>
 
         <button type="submit">Upload Video</button>
     </form>
+
+    <p id="message"></p>
+
+    <script>
+        function validateVideo() {
+            let video = document.getElementById("video");
+            let message = document.getElementById("message");
+
+            if (video.files.length == 0) {
+                message.innerHTML = "Please select a video.";
+                return false;
+            }
+
+            message.innerHTML = "Video selected successfully.";
+            return false;
+        }
+    </script>
 
 </body>
 </html>
