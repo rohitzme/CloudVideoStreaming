@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Secure User Login</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 80px;
+            background-color: #f4f7fb;
+        }
+
+        .login-container {
+            background-color: white;
+            width: 350px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #ccc;
+        }
+
+        input {
+            width: 90%;
+            padding: 10px;
+            margin: 8px 0;
+        }
+
+        button {
+            padding: 10px 25px;
+            cursor: pointer;
+            border: none;
+        }
+
+        h1 {
+            font-size: 24px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Cloud-Native Distributed Enterprise Video Streaming Platform</h1>
+
+    <div class="login-container">
+        <h2>Secure User Login</h2>
+
+        <form onsubmit="return validateLogin()">
+
+            <label>Username</label><br>
+            <input type="text" id="username" placeholder="Enter username"><br>
+
+            <label>Password</label><br>
+            <input type="password" id="password" placeholder="Enter password"><br>
+
+            <button type="submit">Login</button>
+
+        </form>
+    </div>
+
+    <script>
+        function validateLogin() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+
+            if (username === "" || password === "") {
+                alert("Username and password are required.");
+                return false;
+            }
+
+            if (password.length < 6) {
+                alert("Password must contain at least 6 characters.");
+                return false;
+            }
+
+            alert("Login successful!");
+            return false;
+        }
+    </script>
+
+</body>
+</html>
