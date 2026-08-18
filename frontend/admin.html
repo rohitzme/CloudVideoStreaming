@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard</title>
+</head>
+
+<body>
+
+    <h2>Cloud Video Streaming - Admin Dashboard</h2>
+
+    <h3>System Overview</h3>
+
+    <p>Total Users: <span id="users">100</span></p>
+    <p>Total Videos: <span id="videos">25</span></p>
+    <p>Active Streams: <span id="streams">8</span></p>
+
+    <br>
+
+    <button onclick="refreshDashboard()">Refresh Dashboard</button>
+
+    <p id="message"></p>
+
+    <script>
+        function refreshDashboard() {
+            document.getElementById("message").innerHTML =
+                "Dashboard updated successfully.";
+        }
+    </script>
+
+</body>
+</html>
