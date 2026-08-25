@@ -3,47 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Login | Cloud Video Streaming</title>
+    <meta name="description" content="CloudStream enterprise video streaming platform login">
+    <title>Secure Login | CloudStream</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <main class="container narrow">
-        <section class="panel">
+    <main class="container narrow login-shell">
+        <section class="panel login-panel">
             <div class="hero">
                 <span class="badge">● Cloud Platform</span>
-                <h1>Video Streaming Platform</h1>
-                <p>Secure access to upload, stream and manage enterprise video content.</p>
+                <h1>CloudStream</h1>
+                <p>Secure enterprise video streaming with role-based access, upload management and HTTP range streaming.</p>
             </div>
-
             <form id="loginForm">
                 <div class="form-group">
                     <label for="username">Username</label>
-                    <input type="text" id="username" placeholder="Enter username" autocomplete="username">
+                    <input type="text" id="username" placeholder="Enter username" autocomplete="username" required>
                 </div>
-
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" placeholder="Minimum 6 characters" autocomplete="current-password">
+                    <input type="password" id="password" placeholder="Enter password" autocomplete="current-password" required>
                 </div>
-
-                <label style="display:flex;align-items:center;gap:8px;color:var(--muted);font-weight:400;">
-                    <input type="checkbox" id="remember" style="width:auto;"> Remember this session
-                </label>
-
+                <label class="check-row"><input type="checkbox" id="remember"> Remember this session</label>
                 <div class="actions">
-                    <button class="btn" type="submit">Sign in</button>
-                    <button class="btn secondary" type="button" id="demoBtn">Use Demo</button>
+                    <button class="btn" type="submit" id="loginBtn">Sign in</button>
+                    <button class="btn secondary" type="button" id="demoBtn">Use Admin Demo</button>
                 </div>
                 <p id="message" class="message"></p>
             </form>
+            <div class="demo-card">
+                <strong>Demo access</strong>
+                <span>admin / admin123</span>
+                <span>viewer / viewer123</span>
+            </div>
         </section>
-
-        <p class="footer">Cloud-Native Distributed Enterprise Video Streaming Platform</p>
+        <p class="footer">Cloud-Native Distributed Enterprise Video Streaming Platform · Sprint 5 Cloud Deployment</p>
     </main>
-
+    <script src="app.js"></script>
     <script>
         const form = document.getElementById('loginForm');
         const message = document.getElementById('message');
+        const loginBtn = document.getElementById('loginBtn');
+
+        if (getToken()) {
+            const user = getStoredUser();
+            if (user) location.href = user.role === 'admin' ? 'admin.html' : 'stream.html';
+        }
 
         document.getElementById('demoBtn').addEventListener('click', () => {
             document.getElementById('username').value = 'admin';
@@ -52,35 +57,30 @@
             message.className = 'message';
         });
 
-        form.addEventListener('submit', (event) => {
+        form.addEventListener('submit', async event => {
             event.preventDefault();
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-
-            if (!username || !password) {
-                message.textContent = 'Username and password are required.';
+            message.textContent = '';
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Signing in...';
+            try {
+                const result = await apiFetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('username').value.trim(),
+                        password: document.getElementById('password').value
+                    })
+                });
+                saveSession(result, document.getElementById('remember').checked);
+                message.textContent = 'Authentication successful. Opening workspace...';
+                setTimeout(() => location.href = result.user.role === 'admin' ? 'admin.html' : 'stream.html', 300);
+            } catch (error) {
+                message.textContent = error.message;
                 message.className = 'message error';
-                return;
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign in';
             }
-            if (password.length < 6) {
-                message.textContent = 'Password must contain at least 6 characters.';
-                message.className = 'message error';
-                return;
-            }
-
-            const session = { username, loggedInAt: new Date().toISOString() };
-            sessionStorage.setItem('cves_session', JSON.stringify(session));
-            if (document.getElementById('remember').checked) {
-                localStorage.setItem('cves_user', username);
-            }
-
-            message.textContent = 'Login successful. Opening dashboard...';
-            message.className = 'message';
-            setTimeout(() => { window.location.href = 'admin.html'; }, 500);
         });
-
-        const savedUser = localStorage.getItem('cves_user');
-        if (savedUser) document.getElementById('username').value = savedUser;
     </script>
 </body>
 </html>
