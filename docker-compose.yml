@@ -1,0 +1,18 @@
+services:
+  cloudstream:
+    build: .
+    container_name: cloudstream
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:-replace-this-before-production}
+    volumes:
+      - cloudstream-data:/app/backend/data
+      - cloudstream-uploads:/app/backend/uploads
+
+volumes:
+  cloudstream-data:
+  cloudstream-uploads:
