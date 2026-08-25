@@ -3,124 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload Video | Cloud Video Streaming</title>
+    <title>Upload Center | CloudStream</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header class="topbar">
-        <a class="brand" href="admin.html">Cloud<span>Stream</span></a>
-        <nav class="nav">
-            <a href="admin.html">Dashboard</a>
-            <a class="active" href="upload.html">Upload</a>
-            <a href="stream.html">Stream</a>
-        </nav>
-    </header>
-
-    <main class="container">
-        <section class="hero">
-            <span class="badge">● Upload Center</span>
-            <h1>Upload a Video</h1>
-            <p>Select a video, validate it, preview it, and simulate the upload workflow.</p>
-        </section>
-
-        <section class="panel">
-            <div class="form-group">
-                <label for="video">Video file</label>
-                <input type="file" id="video" accept="video/*">
-                <p id="fileInfo" class="muted">Supported video files up to 100 MB.</p>
+<header class="topbar">
+    <a class="brand" href="admin.html">Cloud<span>Stream</span></a>
+    <nav class="nav"><a href="admin.html">Dashboard</a><a class="active" href="upload.html">Upload</a><a href="stream.html">Stream</a><a href="#" id="logout">Logout</a></nav>
+</header>
+<main class="container">
+    <section class="hero"><span class="badge">● Upload Service</span><h1>Video Ingestion</h1><p>Upload a video into the platform storage, persist its metadata and make it immediately available to authenticated viewers.</p></section>
+    <section class="panel">
+        <form id="uploadForm">
+            <div class="two-column">
+                <div>
+                    <div class="form-group"><label for="title">Video title</label><input type="text" id="title" maxlength="100" placeholder="e.g. Enterprise Demo 2026" required></div>
+                    <div class="form-group"><label for="description">Description</label><textarea id="description" maxlength="500" placeholder="Describe the video for viewers..."></textarea></div>
+                    <div class="form-group"><label for="video">Video file</label><input type="file" id="video" accept="video/*" required><p id="fileInfo" class="muted">MP4/WebM/MOV and other browser-supported video formats up to 100 MB.</p></div>
+                </div>
+                <div id="previewBox" class="video-box upload-preview" hidden><video id="preview" controls></video></div>
             </div>
-
-            <div id="previewBox" class="video-box" style="display:none;">
-                <video id="preview" controls></video>
-            </div>
-
-            <div class="actions">
-                <button class="btn" id="uploadBtn" disabled>Start Upload</button>
-                <button class="btn secondary" id="clearBtn" type="button">Clear</button>
-            </div>
-
+            <div class="actions"><button class="btn" type="submit" id="uploadBtn">Upload to CloudStream</button><button class="btn secondary" type="button" id="clearBtn">Clear</button><a class="btn secondary" href="stream.html">Open Streaming Library</a></div>
             <div class="progress"><div id="progressBar"></div></div>
             <p id="message" class="message"></p>
-        </section>
-    </main>
+        </form>
+    </section>
+    <section class="panel" style="margin-top:22px;"><h2>Deployment-ready upload flow</h2><div class="feature-grid"><div><strong>1. Validate</strong><span>Browser validates type and size.</span></div><div><strong>2. Transfer</strong><span>Multipart upload reaches the Node API.</span></div><div><strong>3. Persist</strong><span>Metadata is stored with the video asset.</span></div><div><strong>4. Stream</strong><span>HTTP range requests support playback.</span></div></div></section>
+</main>
+<script src="app.js"></script>
+<script>
+let objectUrl = null;
+const fileInput = document.getElementById('video');
+const preview = document.getElementById('preview');
+const previewBox = document.getElementById('previewBox');
+const message = document.getElementById('message');
+const form = document.getElementById('uploadForm');
 
-    <script>
-        const fileInput = document.getElementById('video');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const preview = document.getElementById('preview');
-        const previewBox = document.getElementById('previewBox');
-        const fileInfo = document.getElementById('fileInfo');
-        const message = document.getElementById('message');
-        const progressBar = document.getElementById('progressBar');
-        let selectedFile = null;
-        let objectUrl = null;
+fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('video/')) { message.textContent = 'Please select a valid video file.'; message.className = 'message error'; fileInput.value = ''; return; }
+    if (file.size > 100 * 1024 * 1024) { message.textContent = 'The maximum upload size is 100 MB.'; message.className = 'message error'; fileInput.value = ''; return; }
+    document.getElementById('title').value ||= file.name.replace(/\.[^.]+$/, '');
+    document.getElementById('fileInfo').textContent = `${file.name} · ${formatBytes(file.size)}`;
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    preview.src = objectUrl;
+    previewBox.hidden = false;
+    message.textContent = 'Video selected and ready for upload.';
+    message.className = 'message';
+});
 
-        fileInput.addEventListener('change', () => {
-            selectedFile = fileInput.files[0];
-            progressBar.style.width = '0%';
-            message.textContent = '';
-            if (!selectedFile) {
-                uploadBtn.disabled = true;
-                return;
-            }
+form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const file = fileInput.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('title', document.getElementById('title').value.trim());
+    formData.append('description', document.getElementById('description').value.trim());
+    const button = document.getElementById('uploadBtn');
+    button.disabled = true;
+    message.textContent = 'Uploading and registering video asset...';
+    message.className = 'message';
+    try {
+        const result = await apiFetch('/api/videos', { method: 'POST', body: formData });
+        document.getElementById('progressBar').style.width = '100%';
+        message.textContent = `${result.message} You can now stream it from the library.`;
+        form.reset();
+        previewBox.hidden = true;
+        preview.removeAttribute('src');
+        document.getElementById('fileInfo').textContent = 'MP4/WebM/MOV and other browser-supported video formats up to 100 MB.';
+    } catch (error) {
+        message.textContent = error.message;
+        message.className = 'message error';
+    } finally { button.disabled = false; }
+});
 
-            const maxSize = 100 * 1024 * 1024;
-            if (!selectedFile.type.startsWith('video/')) {
-                message.textContent = 'Please select a valid video file.';
-                message.className = 'message error';
-                uploadBtn.disabled = true;
-                return;
-            }
-            if (selectedFile.size > maxSize) {
-                message.textContent = 'File is larger than the 100 MB demo limit.';
-                message.className = 'message error';
-                uploadBtn.disabled = true;
-                return;
-            }
-
-            fileInfo.textContent = `${selectedFile.name} • ${(selectedFile.size / 1024 / 1024).toFixed(2)} MB`;
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
-            objectUrl = URL.createObjectURL(selectedFile);
-            preview.src = objectUrl;
-            previewBox.style.display = 'block';
-            uploadBtn.disabled = false;
-            message.textContent = 'Video selected and ready for upload.';
-            message.className = 'message';
-        });
-
-        uploadBtn.addEventListener('click', () => {
-            if (!selectedFile) return;
-            uploadBtn.disabled = true;
-            clearBtn.disabled = true;
-            message.textContent = 'Uploading video...';
-            message.className = 'message';
-            let progress = 0;
-            const timer = setInterval(() => {
-                progress += 10;
-                progressBar.style.width = progress + '%';
-                if (progress >= 100) {
-                    clearInterval(timer);
-                    message.textContent = 'Upload completed successfully (frontend demo).';
-                    uploadBtn.disabled = false;
-                    clearBtn.disabled = false;
-                }
-            }, 120);
-        });
-
-        clearBtn.addEventListener('click', () => {
-            fileInput.value = '';
-            selectedFile = null;
-            uploadBtn.disabled = true;
-            preview.pause();
-            preview.removeAttribute('src');
-            preview.load();
-            previewBox.style.display = 'none';
-            progressBar.style.width = '0%';
-            fileInfo.textContent = 'Supported video files up to 100 MB.';
-            message.textContent = 'Selection cleared.';
-            message.className = 'message';
-        });
-    </script>
+document.getElementById('clearBtn').onclick = () => { form.reset(); previewBox.hidden = true; preview.removeAttribute('src'); document.getElementById('progressBar').style.width = '0%'; message.textContent = ''; };
+document.getElementById('logout').onclick = e => { e.preventDefault(); logout(); };
+requireAuth().then(user => { if (user && !['admin','uploader'].includes(user.role)) { message.textContent = 'Viewer accounts can stream videos but cannot upload.'; document.getElementById('uploadBtn').disabled = true; } });
+</script>
 </body>
 </html>
