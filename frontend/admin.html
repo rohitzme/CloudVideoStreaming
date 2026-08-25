@@ -1,45 +1,132 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Admin Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Cloud Video Streaming</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
+    <header class="topbar">
+        <a class="brand" href="admin.html">Cloud<span>Stream</span></a>
+        <nav class="nav">
+            <a class="active" href="admin.html">Dashboard</a>
+            <a href="upload.html">Upload</a>
+            <a href="stream.html">Stream</a>
+            <a href="login.html">Logout</a>
+        </nav>
+    </header>
 
-    <h2>Cloud Video Streaming - Admin Dashboard</h2>
+    <main class="container">
+        <section class="hero">
+            <span class="badge">● System Online</span>
+            <h1>Admin Dashboard</h1>
+            <p>Monitor the video platform and manage core streaming operations.</p>
+        </section>
 
-    <p>Admin dashboard updated for Sprint 4.</p>
+        <section class="grid" aria-label="System overview">
+            <article class="card">
+                <div class="label">TOTAL USERS</div>
+                <div class="value" id="users">100</div>
+            </article>
+            <article class="card">
+                <div class="label">TOTAL VIDEOS</div>
+                <div class="value" id="videos">25</div>
+            </article>
+            <article class="card">
+                <div class="label">ACTIVE STREAMS</div>
+                <div class="value" id="streams">8</div>
+            </article>
+        </section>
 
-    <h3>System Overview</h3>
+        <section class="panel" style="margin-top:22px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;">
+                <div>
+                    <h2 style="margin:0 0 6px;">Admin Controls</h2>
+                    <p class="muted" style="margin:0;">Sprint 4 administration features and demo controls.</p>
+                </div>
+                <button class="btn secondary" id="refreshBtn">↻ Refresh</button>
+            </div>
 
-    <p>Total Users: <span id="users">100</span></p>
-    <p>Total Videos: <span id="videos">25</span></p>
-    <p>Active Streams: <span id="streams">8</span></p>
+            <div class="actions">
+                <button class="btn" id="usersBtn">Manage Users</button>
+                <button class="btn" id="videosBtn">Manage Videos</button>
+                <button class="btn secondary" id="maintenanceBtn">Enable Maintenance</button>
+            </div>
 
-    <h3>Admin Controls</h3>
+            <p id="message" class="message">Dashboard ready.</p>
+        </section>
 
-    <button onclick="manageUsers()">Manage Users</button>
-    <button onclick="manageVideos()">Manage Videos</button>
-    <button onclick="refreshDashboard()">Refresh Dashboard</button>
+        <section class="panel" style="margin-top:22px;">
+            <h2>Recent Activity</h2>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>USER</th><th>ACTION</th><th>STATUS</th><th>TIME</th></tr>
+                    </thead>
+                    <tbody id="activityTable">
+                        <tr><td>Admin</td><td>Dashboard login</td><td><span class="badge">Success</span></td><td>Just now</td></tr>
+                        <tr><td>User102</td><td>Video upload</td><td><span class="badge">Completed</span></td><td>2 min ago</td></tr>
+                        <tr><td>User087</td><td>Video streaming</td><td><span class="badge">Active</span></td><td>5 min ago</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
 
-    <p id="message"></p>
+        <section class="panel" style="margin-top:22px;">
+            <h2>User Search</h2>
+            <input type="search" id="search" placeholder="Search users by name...">
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>USER</th><th>ROLE</th><th>STATUS</th></tr></thead>
+                    <tbody id="userTable"></tbody>
+                </table>
+            </div>
+        </section>
+    </main>
 
     <script>
-        function manageUsers() {
-            document.getElementById("message").innerHTML =
-                "User management opened.";
-        }
+        const users = [
+            { name: 'admin', role: 'Administrator', status: 'Active' },
+            { name: 'User102', role: 'Viewer', status: 'Active' },
+            { name: 'User087', role: 'Uploader', status: 'Active' },
+            { name: 'User041', role: 'Viewer', status: 'Offline' },
+            { name: 'User019', role: 'Uploader', status: 'Active' }
+        ];
 
-        function manageVideos() {
-            document.getElementById("message").innerHTML =
-                "Video management opened.";
-        }
+        const message = document.getElementById('message');
+        const table = document.getElementById('userTable');
 
-        function refreshDashboard() {
-            document.getElementById("message").innerHTML =
-                "Dashboard refreshed successfully.";
+        function renderUsers(filter = '') {
+            const result = users.filter(u => u.name.toLowerCase().includes(filter.toLowerCase()));
+            table.innerHTML = result.map(u => `
+                <tr><td>${u.name}</td><td>${u.role}</td><td>${u.status}</td></tr>
+            `).join('') || '<tr><td colspan="3">No users found.</td></tr>';
         }
+        renderUsers();
+
+        document.getElementById('search').addEventListener('input', e => renderUsers(e.target.value));
+
+        document.getElementById('usersBtn').onclick = () => {
+            message.textContent = 'User management panel opened. Search the user list below.';
+        };
+
+        document.getElementById('videosBtn').onclick = () => {
+            message.textContent = 'Video management panel opened. Use Upload or Stream from the navigation.';
+        };
+
+        document.getElementById('refreshBtn').onclick = () => {
+            const streamCount = Math.floor(Math.random() * 8) + 4;
+            document.getElementById('streams').textContent = streamCount;
+            message.textContent = `Dashboard refreshed at ${new Date().toLocaleTimeString()}.`;
+        };
+
+        document.getElementById('maintenanceBtn').onclick = function () {
+            const enabled = this.dataset.enabled === 'true';
+            this.dataset.enabled = String(!enabled);
+            this.textContent = enabled ? 'Enable Maintenance' : 'Disable Maintenance';
+            message.textContent = enabled ? 'Maintenance mode disabled.' : 'Maintenance mode enabled (demo).';
+        };
     </script>
-
 </body>
 </html>
