@@ -27,9 +27,7 @@ function logActivity(username,action,status='Success',metadata=''){const activit
 function createMediaToken(userId,videoId){return jwt.sign({sub:userId,videoId,scope:'stream'},JWT_SECRET,{expiresIn:'15m'});}
 
 let users=readJson(files.users,[]);
-if(!users.length){const now=new Date().toISOString();users=[
-{id:crypto.randomUUID(),username:'admin',passwordHash:bcrypt.hashSync('admin123',12),role:'admin',status:'Active',createdAt:now},
-{id:crypto.randomUUID(),username:'viewer',passwordHash:bcrypt.hashSync('viewer123',12),role:'viewer',status:'Active',createdAt:now}];writeJson(files.users,users);}
+if(!users.length){const now=new Date().toISOString();users=[{id:crypto.randomUUID(),username:'admin',passwordHash:bcrypt.hashSync('admin123',12),role:'admin',status:'Active',createdAt:now},{id:crypto.randomUUID(),username:'viewer',passwordHash:bcrypt.hashSync('viewer123',12),role:'viewer',status:'Active',createdAt:now}];writeJson(files.users,users);}
 if(!fs.existsSync(files.videos))writeJson(files.videos,[]);
 if(!fs.existsSync(files.activity))writeJson(files.activity,[]);
 if(!fs.existsSync(files.settings))writeJson(files.settings,{maintenance:false});
@@ -66,7 +64,6 @@ app.post('/api/admin/maintenance',authenticate,requireRole('admin'),(req,res)=>{
 
 app.use('/uploads',express.static(UPLOAD_DIR,{maxAge:'1h'}));
 app.use(express.static(FRONTEND_DIR,{extensions:['html']}));
-app.get(/^(?!\/api).*/,_req=>{});
 app.get(/^(?!\/api).*/,(_req,res)=>res.sendFile(path.join(FRONTEND_DIR,'login.html')));
 app.use((err,_req,res,_next)=>{if(err instanceof multer.MulterError&&err.code==='LIMIT_FILE_SIZE')return res.status(413).json({error:'Video exceeds the 100 MB limit.'});console.error(err);res.status(400).json({error:err.message||'Request failed.'});});
 app.listen(PORT,'0.0.0.0',()=>console.log(`CloudStream running on http://0.0.0.0:${PORT}`));
