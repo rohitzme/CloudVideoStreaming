@@ -1,41 +1,105 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Cloud Video Streaming</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Streaming | Cloud Video Streaming</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
+    <header class="topbar">
+        <a class="brand" href="admin.html">Cloud<span>Stream</span></a>
+        <nav class="nav">
+            <a href="admin.html">Dashboard</a>
+            <a href="upload.html">Upload</a>
+            <a class="active" href="stream.html">Stream</a>
+        </nav>
+    </header>
 
-    <h2>Cloud Video Streaming</h2>
+    <main class="container">
+        <section class="hero">
+            <span class="badge">● Streaming Service</span>
+            <h1>Video Player</h1>
+            <p>Choose a local video to demonstrate playback, progress tracking and player controls.</p>
+        </section>
 
-    <h3>Watch Video</h3>
+        <section class="panel">
+            <div class="form-group">
+                <label for="streamFile">Choose video</label>
+                <input type="file" id="streamFile" accept="video/*">
+            </div>
 
-    <video width="640" controls>
-        <source src="sample.mp4" type="video/mp4">
-        Your browser does not support video playback.
-    </video>
+            <div class="video-box">
+                <video id="video" controls preload="metadata"></video>
+            </div>
 
-    <br><br>
+            <div class="actions">
+                <button class="btn" id="playBtn">▶ Play</button>
+                <button class="btn secondary" id="pauseBtn">Ⅱ Pause</button>
+                <button class="btn secondary" id="muteBtn">🔊 Mute</button>
+                <button class="btn secondary" id="fullBtn">⛶ Fullscreen</button>
+            </div>
 
-    <button onclick="playVideo()">Play</button>
-    <button onclick="pauseVideo()">Pause</button>
-
-    <p id="status">Video ready to play.</p>
+            <div class="progress"><div id="watchProgress"></div></div>
+            <p id="status" class="message">Select a video to begin streaming.</p>
+        </section>
+    </main>
 
     <script>
-        let video = document.querySelector("video");
-        let status = document.getElementById("status");
+        const video = document.getElementById('video');
+        const fileInput = document.getElementById('streamFile');
+        const status = document.getElementById('status');
+        const progress = document.getElementById('watchProgress');
+        let objectUrl = null;
 
-        function playVideo() {
-            video.play();
-            status.innerHTML = "Video is playing.";
-        }
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            if (!file.type.startsWith('video/')) {
+                status.textContent = 'Please select a valid video file.';
+                status.className = 'message error';
+                return;
+            }
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            objectUrl = URL.createObjectURL(file);
+            video.src = objectUrl;
+            video.load();
+            status.textContent = `${file.name} is ready to stream.`;
+            status.className = 'message';
+        });
 
-        function pauseVideo() {
+        document.getElementById('playBtn').onclick = async () => {
+            try {
+                await video.play();
+                status.textContent = 'Video is playing.';
+            } catch {
+                status.textContent = 'Select a video before pressing Play.';
+                status.className = 'message error';
+            }
+        };
+
+        document.getElementById('pauseBtn').onclick = () => {
             video.pause();
-            status.innerHTML = "Video is paused.";
-        }
-    </script>
+            status.textContent = 'Video is paused.';
+        };
 
+        document.getElementById('muteBtn').onclick = () => {
+            video.muted = !video.muted;
+            document.getElementById('muteBtn').textContent = video.muted ? '🔇 Unmute' : '🔊 Mute';
+        };
+
+        document.getElementById('fullBtn').onclick = () => {
+            if (video.requestFullscreen) video.requestFullscreen();
+        };
+
+        video.addEventListener('timeupdate', () => {
+            const percent = video.duration ? (video.currentTime / video.duration) * 100 : 0;
+            progress.style.width = percent + '%';
+        });
+
+        video.addEventListener('ended', () => {
+            status.textContent = 'Playback completed.';
+        });
+    </script>
 </body>
 </html>
