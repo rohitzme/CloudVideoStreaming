@@ -3,130 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard | Cloud Video Streaming</title>
+    <title>Admin Control Center | CloudStream</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header class="topbar">
-        <a class="brand" href="admin.html">Cloud<span>Stream</span></a>
-        <nav class="nav">
-            <a class="active" href="admin.html">Dashboard</a>
-            <a href="upload.html">Upload</a>
-            <a href="stream.html">Stream</a>
-            <a href="login.html">Logout</a>
-        </nav>
-    </header>
+<header class="topbar">
+    <a class="brand" href="admin.html">Cloud<span>Stream</span></a>
+    <nav class="nav">
+        <a class="active" href="admin.html">Dashboard</a>
+        <a href="upload.html">Upload</a>
+        <a href="stream.html">Stream</a>
+        <a href="#" id="logout">Logout</a>
+    </nav>
+</header>
+<main class="container">
+    <section class="hero">
+        <span class="badge" id="systemBadge">● Checking system</span>
+        <h1>Enterprise Control Center</h1>
+        <p>Monitor users, video assets, streaming activity and platform health from one operational dashboard.</p>
+    </section>
 
-    <main class="container">
-        <section class="hero">
-            <span class="badge">● System Online</span>
-            <h1>Admin Dashboard</h1>
-            <p>Monitor the video platform and manage core streaming operations.</p>
-        </section>
+    <section class="grid grid-4">
+        <article class="card"><div class="label">TOTAL USERS</div><div class="value" id="users">—</div><small class="muted">Registered accounts</small></article>
+        <article class="card"><div class="label">VIDEO ASSETS</div><div class="value" id="videos">—</div><small class="muted">Ready to stream</small></article>
+        <article class="card"><div class="label">TOTAL VIEWS</div><div class="value" id="views">—</div><small class="muted">Recorded playback starts</small></article>
+        <article class="card"><div class="label">STORAGE</div><div class="value" id="storage">—</div><small class="muted">Uploaded video data</small></article>
+    </section>
 
-        <section class="grid" aria-label="System overview">
-            <article class="card">
-                <div class="label">TOTAL USERS</div>
-                <div class="value" id="users">100</div>
-            </article>
-            <article class="card">
-                <div class="label">TOTAL VIDEOS</div>
-                <div class="value" id="videos">25</div>
-            </article>
-            <article class="card">
-                <div class="label">ACTIVE STREAMS</div>
-                <div class="value" id="streams">8</div>
-            </article>
-        </section>
-
-        <section class="panel" style="margin-top:22px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;gap:15px;flex-wrap:wrap;">
-                <div>
-                    <h2 style="margin:0 0 6px;">Admin Controls</h2>
-                    <p class="muted" style="margin:0;">Sprint 4 administration features and demo controls.</p>
-                </div>
-                <button class="btn secondary" id="refreshBtn">↻ Refresh</button>
+    <section class="panel two-column" style="margin-top:22px;">
+        <div>
+            <h2>Platform Operations</h2>
+            <p class="muted">Backend API, authentication and deployment controls.</p>
+            <div class="status-list">
+                <div><span>API Health</span><strong id="apiHealth">Checking…</strong></div>
+                <div><span>Active Streams</span><strong id="streams">—</strong></div>
+                <div><span>Maintenance</span><strong id="maintenance">Disabled</strong></div>
             </div>
-
+        </div>
+        <div>
+            <h2>Administrative Actions</h2>
             <div class="actions">
-                <button class="btn" id="usersBtn">Manage Users</button>
-                <button class="btn" id="videosBtn">Manage Videos</button>
+                <button class="btn secondary" id="refreshBtn">↻ Refresh Metrics</button>
                 <button class="btn secondary" id="maintenanceBtn">Enable Maintenance</button>
+                <a class="btn" href="upload.html">+ Upload Video</a>
             </div>
-
             <p id="message" class="message">Dashboard ready.</p>
-        </section>
+        </div>
+    </section>
 
-        <section class="panel" style="margin-top:22px;">
-            <h2>Recent Activity</h2>
-            <div class="table-wrap">
-                <table>
-                    <thead>
-                        <tr><th>USER</th><th>ACTION</th><th>STATUS</th><th>TIME</th></tr>
-                    </thead>
-                    <tbody id="activityTable">
-                        <tr><td>Admin</td><td>Dashboard login</td><td><span class="badge">Success</span></td><td>Just now</td></tr>
-                        <tr><td>User102</td><td>Video upload</td><td><span class="badge">Completed</span></td><td>2 min ago</td></tr>
-                        <tr><td>User087</td><td>Video streaming</td><td><span class="badge">Active</span></td><td>5 min ago</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
+    <section class="panel" style="margin-top:22px;">
+        <div class="section-heading"><div><h2>Video Catalog</h2><p class="muted">Manage uploaded assets and their current view counts.</p></div><button class="btn secondary" id="refreshVideos">Refresh</button></div>
+        <div class="table-wrap"><table><thead><tr><th>TITLE</th><th>UPLOADED BY</th><th>SIZE</th><th>VIEWS</th><th>CREATED</th><th>ACTION</th></tr></thead><tbody id="videoTable"></tbody></table></div>
+    </section>
 
-        <section class="panel" style="margin-top:22px;">
-            <h2>User Search</h2>
-            <input type="search" id="search" placeholder="Search users by name...">
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>USER</th><th>ROLE</th><th>STATUS</th></tr></thead>
-                    <tbody id="userTable"></tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+    <section class="panel" style="margin-top:22px;">
+        <div class="section-heading"><div><h2>User Directory</h2><p class="muted">Search accounts and review role/status information.</p></div><input class="compact-input" type="search" id="search" placeholder="Search username"></div>
+        <div class="table-wrap"><table><thead><tr><th>USERNAME</th><th>ROLE</th><th>STATUS</th><th>CREATED</th></tr></thead><tbody id="userTable"></tbody></table></div>
+    </section>
 
-    <script>
-        const users = [
-            { name: 'admin', role: 'Administrator', status: 'Active' },
-            { name: 'User102', role: 'Viewer', status: 'Active' },
-            { name: 'User087', role: 'Uploader', status: 'Active' },
-            { name: 'User041', role: 'Viewer', status: 'Offline' },
-            { name: 'User019', role: 'Uploader', status: 'Active' }
-        ];
+    <section class="panel" style="margin-top:22px;">
+        <h2>Recent Audit Activity</h2>
+        <div class="table-wrap"><table><thead><tr><th>USER</th><th>ACTION</th><th>STATUS</th><th>TIME</th></tr></thead><tbody id="activityTable"></tbody></table></div>
+    </section>
+</main>
+<script src="app.js"></script>
+<script>
+let maintenanceState = false;
 
-        const message = document.getElementById('message');
-        const table = document.getElementById('userTable');
+async function loadMetrics() {
+    const data = await apiFetch('/api/admin/metrics');
+    users.textContent = data.users;
+    videos.textContent = data.videos;
+    views.textContent = data.totalViews;
+    storage.textContent = formatBytes(data.storageBytes);
+    streams.textContent = data.activeStreams;
+    maintenanceState = data.maintenance;
+    maintenance.textContent = maintenanceState ? 'Enabled' : 'Disabled';
+    maintenanceBtn.textContent = maintenanceState ? 'Disable Maintenance' : 'Enable Maintenance';
+}
+async function loadUsers(search = '') {
+    const data = await apiFetch(`/api/admin/users?search=${encodeURIComponent(search)}`);
+    userTable.innerHTML = data.users.map(u => `<tr><td><strong>${u.username}</strong></td><td><span class="role">${u.role}</span></td><td>${u.status}</td><td>${formatDate(u.createdAt)}</td></tr>`).join('') || '<tr><td colspan="4">No users found.</td></tr>';
+}
+async function loadVideos() {
+    const data = await apiFetch('/api/videos');
+    videoTable.innerHTML = data.videos.map(v => `<tr><td><strong>${v.title}</strong><br><small class="muted">${v.originalName}</small></td><td>${v.uploadedBy}</td><td>${formatBytes(v.size)}</td><td>${v.views}</td><td>${formatDate(v.createdAt)}</td><td><button class="btn danger small-btn" onclick="deleteVideo('${v.id}')">Delete</button></td></tr>`).join('') || '<tr><td colspan="6">No videos uploaded yet.</td></tr>';
+}
+async function loadActivity() {
+    const data = await apiFetch('/api/admin/activity');
+    activityTable.innerHTML = data.activity.map(a => `<tr><td>${a.username}</td><td>${a.action}</td><td>${a.status}</td><td>${formatDate(a.time)}</td></tr>`).join('') || '<tr><td colspan="4">No activity recorded.</td></tr>';
+}
+async function deleteVideo(id) {
+    if (!confirm('Delete this video asset permanently?')) return;
+    try { await apiFetch(`/api/videos/${id}`, { method: 'DELETE' }); message.textContent = 'Video deleted successfully.'; await refreshAll(); }
+    catch (error) { message.textContent = error.message; message.className = 'message error'; }
+}
+async function refreshAll() {
+    try {
+        await Promise.all([loadMetrics(), loadUsers(search.value), loadVideos(), loadActivity()]);
+        apiHealth.textContent = 'Operational';
+        systemBadge.textContent = '● System Online';
+        systemBadge.className = 'badge';
+        message.textContent = `Last refreshed ${new Date().toLocaleTimeString()}.`;
+        message.className = 'message';
+    } catch (error) {
+        apiHealth.textContent = 'Unavailable';
+        systemBadge.textContent = '● Backend issue';
+        systemBadge.className = 'badge danger-badge';
+        message.textContent = error.message;
+        message.className = 'message error';
+    }
+}
 
-        function renderUsers(filter = '') {
-            const result = users.filter(u => u.name.toLowerCase().includes(filter.toLowerCase()));
-            table.innerHTML = result.map(u => `
-                <tr><td>${u.name}</td><td>${u.role}</td><td>${u.status}</td></tr>
-            `).join('') || '<tr><td colspan="3">No users found.</td></tr>';
-        }
-        renderUsers();
+document.getElementById('logout').onclick = e => { e.preventDefault(); logout(); };
+document.getElementById('refreshBtn').onclick = refreshAll;
+document.getElementById('refreshVideos').onclick = loadVideos;
+search.addEventListener('input', e => loadUsers(e.target.value));
+maintenanceBtn.onclick = async () => {
+    try { const data = await apiFetch('/api/admin/maintenance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !maintenanceState }) }); maintenanceState = data.maintenance; await loadMetrics(); message.textContent = `Maintenance mode ${maintenanceState ? 'enabled' : 'disabled'}.`; }
+    catch (error) { message.textContent = error.message; message.className = 'message error'; }
+};
 
-        document.getElementById('search').addEventListener('input', e => renderUsers(e.target.value));
-
-        document.getElementById('usersBtn').onclick = () => {
-            message.textContent = 'User management panel opened. Search the user list below.';
-        };
-
-        document.getElementById('videosBtn').onclick = () => {
-            message.textContent = 'Video management panel opened. Use Upload or Stream from the navigation.';
-        };
-
-        document.getElementById('refreshBtn').onclick = () => {
-            const streamCount = Math.floor(Math.random() * 8) + 4;
-            document.getElementById('streams').textContent = streamCount;
-            message.textContent = `Dashboard refreshed at ${new Date().toLocaleTimeString()}.`;
-        };
-
-        document.getElementById('maintenanceBtn').onclick = function () {
-            const enabled = this.dataset.enabled === 'true';
-            this.dataset.enabled = String(!enabled);
-            this.textContent = enabled ? 'Enable Maintenance' : 'Disable Maintenance';
-            message.textContent = enabled ? 'Maintenance mode disabled.' : 'Maintenance mode enabled (demo).';
-        };
-    </script>
+requireAuth('admin').then(user => { if (user) refreshAll(); });
+</script>
 </body>
 </html>
