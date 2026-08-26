@@ -8,21 +8,57 @@
 </head>
 <body>
 <header class="topbar">
-    <a class="brand" href="admin.html">Cloud<span>Stream</span></a>
-    <nav class="nav"><a href="admin.html">Dashboard</a><a href="upload.html">Upload</a><a class="active" href="stream.html">Stream</a><a href="#" id="logout">Logout</a></nav>
+    <a class="brand" href="stream.html">Cloud<span>Stream</span></a>
+    <nav class="nav" id="navBar"></nav>
 </header>
 <main class="container">
-    <section class="hero"><span class="badge">● Streaming Service</span><h1>Enterprise Video Library</h1><p>Authenticated playback backed by the Node.js streaming API with HTTP byte-range support.</p></section>
-    <section class="panel">
-        <div class="section-heading"><div><h2>Select a video</h2><p id="libraryStatus" class="muted">Loading video catalog…</p></div><button class="btn secondary" id="refreshBtn">↻ Refresh Library</button></div>
-        <select id="videoSelect" class="select-input"><option value="">Choose a video asset</option></select>
-        <div id="videoMeta" class="video-meta" hidden></div>
-        <div class="video-box stream-player"><video id="video" controls preload="metadata"></video></div>
-        <div class="actions"><button class="btn" id="playBtn">▶ Play</button><button class="btn secondary" id="pauseBtn">Ⅱ Pause</button><button class="btn secondary" id="muteBtn">🔊 Mute</button><button class="btn secondary" id="fullBtn">⛶ Fullscreen</button></div>
-        <div class="progress"><div id="watchProgress"></div></div>
-        <p id="status" class="message">Choose a video to begin streaming.</p>
+    <section class="hero">
+        <span class="badge">● Streaming Service</span>
+        <h1>Enterprise Video Library</h1>
+        <p>Authenticated playback backed by the Node.js streaming API with HTTP byte-range support.</p>
     </section>
-    <section class="panel" style="margin-top:22px;"><h2>Streaming architecture</h2><div class="feature-grid"><div><strong>Authenticated</strong><span>JWT session required for protected video access.</span></div><div><strong>Range streaming</strong><span>Browser playback uses HTTP 206 byte ranges.</span></div><div><strong>Persistent metadata</strong><span>Video title, owner, size and views are tracked.</span></div><div><strong>Remote ready</strong><span>Runs behind one EC2 public endpoint for Sprint 5.</span></div></div></section>
+
+    <section class="panel" id="playerPanel" hidden>
+        <div class="section-heading">
+            <div><h2 id="playerTitle">Now Playing</h2><p id="playerStatus" class="muted">Loading player...</p></div>
+            <button class="btn secondary" id="closePlayerBtn">✕ Close Player</button>
+        </div>
+        <div id="playerMeta" class="video-meta"></div>
+        <div class="video-box stream-player"><video id="video" controls preload="metadata"></video></div>
+        <div class="actions">
+            <button class="btn" id="playBtn">▶ Play</button>
+            <button class="btn secondary" id="pauseBtn">Ⅱ Pause</button>
+            <button class="btn secondary" id="muteBtn">🔊 Mute</button>
+            <button class="btn secondary" id="fullBtn">⛶ Fullscreen</button>
+        </div>
+        <div class="progress"><div id="watchProgress"></div></div>
+        <p id="status" class="message"></p>
+    </section>
+
+    <section class="panel">
+        <div class="section-heading">
+            <div><h2>Video Library</h2><p id="libraryStatus" class="muted">Loading video catalog...</p></div>
+            <div class="search-row">
+                <input class="compact-input" type="search" id="searchInput" placeholder="Search videos...">
+                <button class="btn secondary" id="refreshBtn">↻ Refresh</button>
+            </div>
+        </div>
+        <div id="videoGrid" class="video-grid"></div>
+        <div id="emptyState" class="empty-state" hidden>
+            <strong>No videos available</strong>
+            <span>Videos uploaded by administrators will appear here.</span>
+        </div>
+    </section>
+
+    <section class="panel" style="margin-top:22px;">
+        <h2>Streaming architecture</h2>
+        <div class="feature-grid">
+            <div><strong>Authenticated</strong><span>JWT session required for protected video access.</span></div>
+            <div><strong>Range streaming</strong><span>Browser playback uses HTTP 206 byte ranges.</span></div>
+            <div><strong>Persistent metadata</strong><span>Video title, owner, size and views are tracked.</span></div>
+            <div><strong>Secure delivery</strong><span>Uploaded files are served only through authenticated endpoints.</span></div>
+        </div>
+    </section>
 </main>
 <script src="app.js"></script>
 <script src="stream.js"></script>

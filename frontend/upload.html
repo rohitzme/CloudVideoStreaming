@@ -8,8 +8,8 @@
 </head>
 <body>
 <header class="topbar">
-    <a class="brand" href="admin.html">Cloud<span>Stream</span></a>
-    <nav class="nav"><a href="admin.html">Dashboard</a><a class="active" href="upload.html">Upload</a><a href="stream.html">Stream</a><a href="#" id="logout">Logout</a></nav>
+    <a class="brand" href="stream.html">Cloud<span>Stream</span></a>
+    <nav class="nav" id="navBar"></nav>
 </header>
 <main class="container">
     <section class="hero"><span class="badge">● Upload Service</span><h1>Video Ingestion</h1><p>Upload a video into the platform storage, persist its metadata and make it immediately available to authenticated viewers.</p></section>
@@ -25,10 +25,11 @@
             </div>
             <div class="actions"><button class="btn" type="submit" id="uploadBtn">Upload to CloudStream</button><button class="btn secondary" type="button" id="clearBtn">Clear</button><a class="btn secondary" href="stream.html">Open Streaming Library</a></div>
             <div class="progress"><div id="progressBar"></div></div>
+            <p id="progressText" class="muted" hidden></p>
             <p id="message" class="message"></p>
         </form>
     </section>
-    <section class="panel" style="margin-top:22px;"><h2>Deployment-ready upload flow</h2><div class="feature-grid"><div><strong>1. Validate</strong><span>Browser validates type and size.</span></div><div><strong>2. Transfer</strong><span>Multipart upload reaches the Node API.</span></div><div><strong>3. Persist</strong><span>Metadata is stored with the video asset.</span></div><div><strong>4. Stream</strong><span>HTTP range requests support playback.</span></div></div></section>
+    <section class="panel" style="margin-top:22px;"><h2>Upload flow</h2><div class="feature-grid"><div><strong>1. Validate</strong><span>Browser validates type and size.</span></div><div><strong>2. Transfer</strong><span>Multipart upload reaches the Node API.</span></div><div><strong>3. Persist</strong><span>Metadata is stored with the video asset.</span></div><div><strong>4. Stream</strong><span>HTTP range requests support playback.</span></div></div></section>
 </main>
 <script src="app.js"></script>
 <script src="upload.js"></script>
