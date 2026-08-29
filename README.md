@@ -87,7 +87,7 @@ The Compose setup keeps application metadata and uploaded videos in named Docker
 
 ## AWS EC2 deployment for Sprint 5
 
-1. Create an Ubuntu EC2 instance.
+1. Create an Amazon Linux 2023 EC2 instance.
 2. Configure the Security Group with SSH `22` and application port `3000` only when direct port access is required.
 3. Connect through SSH.
 4. Install Git, Docker and Docker Compose.
