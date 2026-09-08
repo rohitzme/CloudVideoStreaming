@@ -1,6 +1,6 @@
 # Cloud-Native Distributed Enterprise Video Streaming Platform
 
-CloudStream is an enterprise-style video streaming platform built for the Agile Development Process and DevOps Lab. The application combines a responsive web frontend with a Node.js API, JWT authentication, role-based access, persistent video metadata, file storage, HTTP range streaming, audit activity and an administrator control center.
+CloudStream is an enterprise-style video streaming platform built for the Agile Development Process and DevOps Lab. The application combines a responsive web frontend with a Node.js API, JWT authentication, role-based access, persistent video metadata, HTTP range streaming, audit activity, cloud object storage and an administrator control center.
 
 ## Architecture
 
@@ -12,15 +12,17 @@ Browser
 Node.js + Express API (port 3000)
    |-- Authentication / RBAC
    |-- Video upload service (Multer)
-   |-- HTTP Range streaming
+   |-- HTTP Range / 206 streaming
    |-- Admin metrics / audit activity
    |
-   +--> JSON persistence (development/demo)
-   +--> Local video storage
+   +--> JSON metadata persistence (demo)
+   +--> Local Docker volume OR Amazon S3 object storage
 
 Docker / AWS EC2
    |
    +--> Public IP:3000
+   |
+   +--> Amazon S3 (Sprint 6 cloud video storage)
 ```
 
 ## Features
@@ -28,14 +30,17 @@ Docker / AWS EC2
 - Secure login with bcrypt password hashing and JWT sessions
 - Admin and viewer roles
 - Video upload with 100 MB validation limit
-- Persistent video metadata and local file storage
+- Persistent video metadata
 - HTTP `Range`/206 streaming for browser playback
+- Optional Amazon S3 video storage with AES256 server-side encryption
 - View-count tracking and audit activity
 - Admin metrics, user search, video deletion and maintenance toggle
+- Cloud storage provider/region shown in the admin dashboard
 - Helmet security headers, CORS and login rate limiting
 - Responsive enterprise dashboard
 - Dockerfile and Docker Compose deployment
-- `/api/health` endpoint for deployment verification
+- `/api/health` endpoint with storage status
+- GitHub Actions CI validation for backend syntax and Docker builds
 
 ## Demo accounts
 
@@ -81,36 +86,51 @@ Create a `.env` file from `.env.example`, then:
 docker compose up -d --build
 ```
 
-Open `http://localhost:3000`.
+The Compose setup keeps application metadata and local video assets in named Docker volumes when `STORAGE_MODE=local`.
 
-The Compose setup keeps application metadata and uploaded videos in named Docker volumes.
+## Sprint 6 — Amazon S3 cloud storage
 
-## AWS EC2 deployment for Sprint 5
+Sprint 6 adds a cloud object-storage path while preserving local Docker storage as the default development mode. Set the following in `.env` on EC2:
 
-1. Create an Amazon Linux 2023 EC2 instance.
-2. Configure the Security Group with SSH `22` and application port `3000` only when direct port access is required.
-3. Connect through SSH.
-4. Install Git, Docker and Docker Compose.
-5. Clone this repository.
-6. Create `.env` and set a strong `JWT_SECRET`.
-7. Run `docker compose up -d --build`.
-8. Verify `http://<EC2-PUBLIC-IP>:3000/api/health` returns a JSON status of `ok`.
-9. Open `http://<EC2-PUBLIC-IP>:3000` in a browser.
-10. Demonstrate login, upload and video playback for the Sprint 5 evidence.
+```text
+STORAGE_MODE=s3
+AWS_REGION=ap-south-1
+S3_BUCKET=your-unique-bucket-name
+S3_PREFIX=cloudstream/
+```
 
-For a stricter production deployment, place the service behind HTTPS/reverse proxy and use managed object storage/database services instead of local JSON/file storage.
+The Node.js AWS SDK v3 uses the EC2 instance's IAM role credentials automatically, so long-lived AWS access keys do not need to be placed in the repository or `.env` file. The application uploads new video assets to S3, serves authenticated byte ranges from S3, and deletes the S3 object when an administrator deletes a video.
 
-## Sprint 5 verification checklist
+The bucket should remain private; application authentication controls access to the streaming endpoint.
 
-- EC2 instance running
-- Latest code cloned from GitHub
-- Container/application starts without critical errors
-- Health endpoint responds
-- Login works remotely
-- Video upload works remotely
-- Video appears in the streaming library
-- Browser playback works through HTTP range requests
-- Admin dashboard shows live metrics and activity
+### Sprint 6 deployment flow
+
+1. Create or use an Amazon Linux 2023 EC2 instance.
+2. Attach an IAM role to EC2 with only the S3 permissions required for the CloudStream bucket (`s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`, `s3:HeadObject`/`s3:GetObject` as appropriate).
+3. Create a private S3 bucket in the same AWS Region used by the application.
+4. Pull the `sprint-6-cloud-infrastructure` branch on EC2.
+5. Create `.env` with a strong `JWT_SECRET`, `STORAGE_MODE=s3`, `AWS_REGION` and `S3_BUCKET`.
+6. Run `docker compose up -d --build`.
+7. Verify `/api/health` and confirm the response reports `Amazon S3` as the storage provider.
+8. Log in as `admin`, upload a video and verify that the object appears under the configured S3 prefix.
+9. Play the uploaded video and demonstrate HTTP byte-range streaming.
+10. Use the admin dashboard to show cloud storage status, views, activity and operational health.
+
+For a stricter production deployment, place the service behind HTTPS/reverse proxy and move JSON metadata to a managed database.
+
+## Sprint 6 verification checklist
+
+- Sprint 6 branch pushed to GitHub
+- S3 storage integration present in backend
+- Docker Compose exposes cloud-storage configuration
+- EC2 IAM role can access the private S3 bucket
+- Container builds successfully
+- `/api/health` reports operational status and storage provider
+- Admin dashboard shows cloud storage and AWS Region
+- New video uploads reach S3
+- Authenticated video playback works through S3 byte ranges
+- Video deletion removes the S3 object
+- GitHub Actions validates backend syntax and Docker image build
 
 ## Project structure
 
@@ -118,7 +138,8 @@ For a stricter production deployment, place the service behind HTTPS/reverse pro
 CloudVideoStreaming/
 ├── backend/
 │   ├── package.json
-│   └── server.js
+│   ├── server.js
+│   └── storage.js
 ├── frontend/
 │   ├── app.js
 │   ├── login.html
@@ -126,6 +147,9 @@ CloudVideoStreaming/
 │   ├── upload.html
 │   ├── stream.html
 │   └── styles.css
+├── .github/
+│   └── workflows/
+│       └── sprint6-ci.yml
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .env.example
