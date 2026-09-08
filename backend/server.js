@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const helmet = require('helmet');
 const cors = require('cors');
+const { isS3Enabled, storageStatus, objectKey, uploadFile, headFile, getFile, deleteFile } = require('./storage');
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -71,7 +72,7 @@ const upload = multer({
 });
 
 app.disable('x-powered-by');
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' }, hsts: false, contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -113,10 +114,84 @@ function requireRole(...roles) {
   return (req, res, next) => roles.includes(req.user.role) ? next() : res.status(403).json({ error: 'Insufficient permissions.' });
 }
 
-// Health check
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'cloud-video-streaming-api', uptime: process.uptime(), timestamp: new Date().toISOString() }));
+async function streamVideo(video, req, res, mode = 'stream') {
+  const useS3 = video.storage === 's3';
+  if (!useS3) {
+    const filePath = path.join(UPLOAD_DIR, video.filename);
+    if (!fs.existsSync(filePath)) throw new Error('Video file is missing from storage.');
+    const stat = fs.statSync(filePath);
+    return streamLocal(filePath, video.mimeType, stat.size, req, res, mode);
+  }
 
-// Login
+  if (!isS3Enabled()) throw new Error('This video is stored in S3, but S3 storage is not configured.');
+  const meta = await headFile(video.filename);
+  const total = Number(meta.ContentLength || 0);
+  const range = req.headers.range;
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Content-Type', video.mimeType || meta.ContentType || 'video/mp4');
+  res.setHeader('Cache-Control', 'private, max-age=900');
+
+  let requestedRange = null;
+  if (range) {
+    const match = /^bytes=(\d+)-(\d*)$/.exec(range);
+    if (!match) return res.status(416).set('Content-Range', `bytes */${total}`).end();
+    const start = Number(match[1]);
+    const end = match[2] ? Number(match[2]) : Math.min(start + 1024 * 1024 - 1, total - 1);
+    if (start >= total || start > end) return res.status(416).set('Content-Range', `bytes */${total}`).end();
+    requestedRange = [start, Math.min(end, total - 1)];
+  } else if (mode === 'thumbnail') {
+    requestedRange = [0, Math.min(1024 * 1024 - 1, total - 1)];
+  }
+
+  const rangeHeader = requestedRange ? `bytes=${requestedRange[0]}-${requestedRange[1]}` : undefined;
+  const result = await getFile(video.filename, rangeHeader);
+  if (!result || !result.Body) throw new Error('S3 did not return the video stream.');
+
+  if (requestedRange) {
+    const start = requestedRange[0];
+    const end = requestedRange[1];
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${total}`);
+    res.setHeader('Content-Length', end - start + 1);
+  } else {
+    res.setHeader('Content-Length', total);
+  }
+  if (req.method === 'HEAD') return res.end();
+  return result.Body.pipe(res);
+}
+
+function streamLocal(filePath, mimeType, total, req, res, mode) {
+  const range = req.headers.range;
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Content-Type', mimeType || 'video/mp4');
+  res.setHeader('Cache-Control', 'private, max-age=900');
+  if (!range && mode !== 'thumbnail') {
+    res.setHeader('Content-Length', total);
+    if (req.method === 'HEAD') return res.end();
+    return fs.createReadStream(filePath).pipe(res);
+  }
+  let start = 0;
+  let end = Math.min(1024 * 1024 - 1, total - 1);
+  if (range) {
+    const match = /^bytes=(\d+)-(\d*)$/.exec(range);
+    if (!match) return res.status(416).set('Content-Range', `bytes */${total}`).end();
+    start = Number(match[1]);
+    end = match[2] ? Number(match[2]) : Math.min(start + 1024 * 1024 - 1, total - 1);
+  }
+  if (start >= total || start > end) return res.status(416).set('Content-Range', `bytes */${total}`).end();
+  const safeEnd = Math.min(end, total - 1);
+  res.status(206);
+  res.setHeader('Content-Range', `bytes ${start}-${safeEnd}/${total}`);
+  res.setHeader('Content-Length', safeEnd - start + 1);
+  if (req.method === 'HEAD') return res.end();
+  return fs.createReadStream(filePath, { start, end: safeEnd }).pipe(res);
+}
+
+app.get('/api/health', (_req, res) => res.json({
+  status: 'ok', service: 'cloud-video-streaming-api', uptime: process.uptime(),
+  timestamp: new Date().toISOString(), storage: storageStatus()
+}));
+
 app.post('/api/auth/login', rateLimit(10, 60000), async (req, res) => {
   const username = safeText(req.body.username, 50).toLowerCase();
   const password = String(req.body.password || '');
@@ -131,20 +206,17 @@ app.post('/api/auth/login', rateLimit(10, 60000), async (req, res) => {
   res.json({ token, user: publicUser(user) });
 });
 
-// Logout
 app.post('/api/auth/logout', authenticate, (req, res) => {
   logActivity(req.user.username, 'Logout', 'Success');
   res.json({ message: 'Logged out successfully.' });
 });
 
-// Current user
 app.get('/api/me', authenticate, (req, res) => {
   const user = users.find(u => u.id === req.user.sub);
   if (!user) return res.status(401).json({ error: 'User no longer exists.' });
   res.json({ user: publicUser(user) });
 });
 
-// List videos (with search)
 app.get('/api/videos', authenticate, (req, res) => {
   const search = safeText(req.query.search, 50).toLowerCase();
   const videos = readJson(files.videos, [])
@@ -153,86 +225,67 @@ app.get('/api/videos', authenticate, (req, res) => {
     .map(v => ({
       id: v.id, title: v.title, description: v.description, originalName: v.originalName,
       size: v.size, uploadedBy: v.uploadedBy, createdAt: v.createdAt, views: v.views,
+      storage: v.storage || 'local',
       streamUrl: `/api/videos/${v.id}/stream?token=${encodeURIComponent(createMediaToken(req.user.sub, v.id))}`,
       thumbnailUrl: `/api/videos/${v.id}/thumbnail?token=${encodeURIComponent(createMediaToken(req.user.sub, v.id))}`
     }));
   res.json({ videos });
 });
 
-// Video details
 app.get('/api/videos/:id', authenticate, (req, res) => {
   const v = readJson(files.videos, []).find(x => x.id === req.params.id && x.status === 'ready');
   if (!v) return res.status(404).json({ error: 'Video not found.' });
-  res.json({ video: { id: v.id, title: v.title, description: v.description, size: v.size, uploadedBy: v.uploadedBy, createdAt: v.createdAt, views: v.views } });
+  res.json({ video: { id: v.id, title: v.title, description: v.description, size: v.size, uploadedBy: v.uploadedBy, createdAt: v.createdAt, views: v.views, storage: v.storage || 'local' } });
 });
 
-// Upload video
-app.post('/api/videos', authenticate, requireRole('admin', 'uploader'), upload.single('video'), (req, res) => {
+app.post('/api/videos', authenticate, requireRole('admin', 'uploader'), upload.single('video'), async (req, res, next) => {
   if (!req.file) return res.status(400).json({ error: 'A video file is required.' });
   const title = safeText(req.body.title || path.basename(req.file.originalname, path.extname(req.file.originalname)), 100);
   const description = safeText(req.body.description, 500);
   const videos = readJson(files.videos, []);
+  const id = crypto.randomUUID();
+  const storage = isS3Enabled() ? 's3' : 'local';
+  const filename = storage === 's3' ? objectKey(req.file.filename) : req.file.filename;
   const video = {
-    id: crypto.randomUUID(), title, description,
-    originalName: safeText(req.file.originalname, 180),
-    filename: req.file.filename, mimeType: req.file.mimetype, size: req.file.size,
-    uploadedBy: req.user.username, createdAt: new Date().toISOString(), views: 0, status: 'ready'
+    id, title, description, originalName: safeText(req.file.originalname, 180),
+    filename, mimeType: req.file.mimetype, size: req.file.size,
+    uploadedBy: req.user.username, createdAt: new Date().toISOString(), views: 0, status: 'ready', storage
   };
-  videos.unshift(video);
-  writeJson(files.videos, videos);
-  logActivity(req.user.username, 'Video upload', 'Completed', video.title);
-  res.status(201).json({
-    message: 'Video uploaded successfully.',
-    video: { id: video.id, title: video.title, description: video.description, size: video.size, streamUrl: `/api/videos/${video.id}/stream?token=${encodeURIComponent(createMediaToken(req.user.sub, video.id))}` }
-  });
-});
 
-// Stream video with HTTP range support
-app.get('/api/videos/:id/stream', authenticateMedia, (req, res) => {
-  const video = readJson(files.videos, []).find(v => v.id === req.params.id && v.status === 'ready');
-  if (!video) return res.status(404).json({ error: 'Video not found.' });
-  const filePath = path.join(UPLOAD_DIR, video.filename);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Video file is missing from storage.' });
-  const stat = fs.statSync(filePath), range = req.headers.range;
-  res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Content-Type', video.mimeType || 'video/mp4');
-  res.setHeader('Cache-Control', 'private, max-age=900');
-  if (!range) {
-    res.setHeader('Content-Length', stat.size);
-    if (req.method === 'HEAD') return res.end();
-    return fs.createReadStream(filePath).pipe(res);
+  try {
+    if (storage === 's3') {
+      await uploadFile(req.file.path, filename, req.file.mimetype);
+      fs.unlinkSync(req.file.path);
+    }
+    videos.unshift(video);
+    writeJson(files.videos, videos);
+    logActivity(req.user.username, 'Video upload', 'Completed', `${video.title} [${storage}]`);
+    res.status(201).json({
+      message: `Video uploaded successfully to ${storage === 's3' ? 'Amazon S3' : 'local Docker storage'}.`,
+      video: { id: video.id, title: video.title, description: video.description, size: video.size, storage, streamUrl: `/api/videos/${video.id}/stream?token=${encodeURIComponent(createMediaToken(req.user.sub, video.id))}` }
+    });
+  } catch (error) {
+    if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    next(error);
   }
-  const match = /bytes=(\d+)-(\d*)/.exec(range);
-  if (!match) return res.status(416).set('Content-Range', `bytes */${stat.size}`).end();
-  const start = Number(match[1]);
-  const end = match[2] ? Number(match[2]) : Math.min(start + 1024 * 1024 - 1, stat.size - 1);
-  if (start >= stat.size || start > end) return res.status(416).set('Content-Range', `bytes */${stat.size}`).end();
-  const safeEnd = Math.min(end, stat.size - 1);
-  res.status(206);
-  res.setHeader('Content-Range', `bytes ${start}-${safeEnd}/${stat.size}`);
-  res.setHeader('Content-Length', safeEnd - start + 1);
-  if (req.method === 'HEAD') return res.end();
-  fs.createReadStream(filePath, { start, end: safeEnd }).pipe(res);
 });
 
-// Thumbnail (first 1MB for preview)
-app.get('/api/videos/:id/thumbnail', authenticateMedia, (req, res) => {
-  const video = readJson(files.videos, []).find(v => v.id === req.params.id && v.status === 'ready');
-  if (!video) return res.status(404).json({ error: 'Video not found.' });
-  const filePath = path.join(UPLOAD_DIR, video.filename);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Video file is missing from storage.' });
-  const stat = fs.statSync(filePath);
-  const chunkSize = Math.min(1024 * 1024, stat.size);
-  res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Content-Type', video.mimeType || 'video/mp4');
-  res.setHeader('Cache-Control', 'private, max-age=900');
-  res.setHeader('Content-Length', chunkSize);
-  res.setHeader('Content-Range', `bytes 0-${chunkSize - 1}/${stat.size}`);
-  res.status(206);
-  fs.createReadStream(filePath, { start: 0, end: chunkSize - 1 }).pipe(res);
+app.get('/api/videos/:id/stream', authenticateMedia, async (req, res, next) => {
+  try {
+    const video = readJson(files.videos, []).find(v => v.id === req.params.id && v.status === 'ready');
+    if (!video) return res.status(404).json({ error: 'Video not found.' });
+    await streamVideo(video, req, res, 'stream');
+  } catch (error) { next(error); }
 });
 
-// View tracking
+app.get('/api/videos/:id/thumbnail', authenticateMedia, async (req, res, next) => {
+  try {
+    const video = readJson(files.videos, []).find(v => v.id === req.params.id && v.status === 'ready');
+    if (!video) return res.status(404).json({ error: 'Video not found.' });
+    await streamVideo(video, req, res, 'thumbnail');
+  } catch (error) { next(error); }
+});
+
 app.post('/api/videos/:id/view', authenticate, (req, res) => {
   const videos = readJson(files.videos, []);
   const video = videos.find(v => v.id === req.params.id);
@@ -243,20 +296,23 @@ app.post('/api/videos/:id/view', authenticate, (req, res) => {
   res.json({ views: video.views });
 });
 
-// Delete video
-app.delete('/api/videos/:id', authenticate, requireRole('admin'), (req, res) => {
+app.delete('/api/videos/:id', authenticate, requireRole('admin'), async (req, res, next) => {
   const videos = readJson(files.videos, []);
   const index = videos.findIndex(v => v.id === req.params.id);
   if (index < 0) return res.status(404).json({ error: 'Video not found.' });
   const [video] = videos.splice(index, 1);
-  const filePath = path.join(UPLOAD_DIR, video.filename);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  writeJson(files.videos, videos);
-  logActivity(req.user.username, 'Video deleted', 'Completed', video.title);
-  res.json({ message: 'Video deleted.' });
+  try {
+    if (video.storage === 's3') await deleteFile(video.filename);
+    else {
+      const filePath = path.join(UPLOAD_DIR, video.filename);
+      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    }
+    writeJson(files.videos, videos);
+    logActivity(req.user.username, 'Video deleted', 'Completed', video.title);
+    res.json({ message: 'Video deleted.' });
+  } catch (error) { next(error); }
 });
 
-// Admin metrics
 app.get('/api/admin/metrics', authenticate, requireRole('admin'), (_req, res) => {
   const videos = readJson(files.videos, []);
   const activity = readJson(files.activity, []);
@@ -265,22 +321,30 @@ app.get('/api/admin/metrics', authenticate, requireRole('admin'), (_req, res) =>
     users: users.length, videos: videos.length, activeStreams,
     totalViews: videos.reduce((s, v) => s + Number(v.views || 0), 0),
     storageBytes: videos.reduce((s, v) => s + Number(v.size || 0), 0),
-    maintenance: readJson(files.settings, { maintenance: false }).maintenance
+    s3Videos: videos.filter(v => v.storage === 's3').length,
+    maintenance: readJson(files.settings, { maintenance: false }).maintenance,
+    storage: storageStatus()
   });
 });
 
-// Admin users
+app.get('/api/admin/cloud', authenticate, requireRole('admin'), (_req, res) => {
+  const videos = readJson(files.videos, []);
+  res.json({
+    storage: storageStatus(),
+    cloudVideos: videos.filter(v => v.storage === 's3').length,
+    localVideos: videos.filter(v => (v.storage || 'local') === 'local').length
+  });
+});
+
 app.get('/api/admin/users', authenticate, requireRole('admin'), (req, res) => {
   const search = safeText(req.query.search, 50).toLowerCase();
   res.json({ users: users.filter(u => !search || u.username.toLowerCase().includes(search)).map(publicUser) });
 });
 
-// Admin activity
 app.get('/api/admin/activity', authenticate, requireRole('admin'), (_req, res) => {
   res.json({ activity: readJson(files.activity, []).slice(0, 30) });
 });
 
-// Maintenance toggle
 app.post('/api/admin/maintenance', authenticate, requireRole('admin'), (req, res) => {
   const settings = readJson(files.settings, { maintenance: false });
   settings.maintenance = Boolean(req.body.enabled);
@@ -289,11 +353,9 @@ app.post('/api/admin/maintenance', authenticate, requireRole('admin'), (req, res
   res.json({ maintenance: settings.maintenance });
 });
 
-// Serve frontend (no public /uploads access)
 app.use(express.static(FRONTEND_DIR, { extensions: ['html'] }));
 app.get(/^(?!\/api).*/, (_req, res) => res.sendFile(path.join(FRONTEND_DIR, 'login.html')));
 
-// Error handler
 app.use((err, _req, res, _next) => {
   if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE')
     return res.status(413).json({ error: 'Video exceeds the 100 MB limit.' });
@@ -301,4 +363,4 @@ app.use((err, _req, res, _next) => {
   res.status(400).json({ error: err.message || 'Request failed.' });
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log(`CloudStream running on http://0.0.0.0:${PORT}`));
+app.listen(PORT, '0.0.0.0', () => console.log(`CloudStream running on http://0.0.0.0:${PORT} | storage=${storageStatus().provider}`));

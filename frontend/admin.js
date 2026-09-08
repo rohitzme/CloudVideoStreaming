@@ -10,6 +10,8 @@ async function loadMetrics() {
     maintenanceState = data.maintenance;
     maintenance.textContent = maintenanceState ? 'Enabled' : 'Disabled';
     maintenanceBtn.textContent = maintenanceState ? 'Disable Maintenance' : 'Enable Maintenance';
+    cloudStorage.textContent = data.storage?.provider || 'Unknown';
+    cloudRegion.textContent = data.storage?.region || '—';
 }
 async function loadUsers(search = '') {
     const data = await apiFetch(`/api/admin/users?search=${encodeURIComponent(search)}`);
@@ -38,6 +40,7 @@ async function refreshAll() {
         message.className = 'message';
     } catch (error) {
         apiHealth.textContent = 'Unavailable';
+        cloudStorage.textContent = 'Unavailable';
         systemBadge.textContent = '● Backend issue';
         systemBadge.className = 'badge danger-badge';
         message.textContent = error.message;
