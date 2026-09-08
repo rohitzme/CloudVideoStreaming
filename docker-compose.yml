@@ -9,6 +9,10 @@ services:
       NODE_ENV: production
       PORT: 3000
       JWT_SECRET: ${JWT_SECRET:-replace-this-before-production}
+      STORAGE_MODE: ${STORAGE_MODE:-local}
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_PREFIX: ${S3_PREFIX:-cloudstream/}
     volumes:
       - cloudstream-data:/app/backend/data
       - cloudstream-uploads:/app/backend/uploads
