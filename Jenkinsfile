@@ -6,7 +6,7 @@ pipeline {
         stage('Checkout') {
     steps {
         checkout scm
-        echo 'CloudStream CI automatically triggered after GitHub update'
+        echo 'Automatic CI verification - Sprint 8'
     }
 }
 
