@@ -6,7 +6,7 @@ pipeline {
         stage('Checkout') {
     steps {
         checkout scm
-        echo 'Automatic Poll SCM CI test - Sprint 8'
+        echo 'Automatic CI verification - Sprint 8 - Test 2'
     }
 }
 
