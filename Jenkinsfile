@@ -6,7 +6,7 @@ pipeline {
         stage('Checkout') {
     steps {
         checkout scm
-        echo 'CloudStream source code checked out from GitHub - Sprint 8 CI'
+        echo 'CloudStream CI automatically triggered after GitHub update'
     }
 }
 
