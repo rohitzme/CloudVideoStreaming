@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudstream
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cloudstream
+  template:
+    metadata:
+      labels:
+        app: cloudstream
+    spec:
+      containers:
+        - name: cloudstream
+          image: rohi3/cloudstream:build-16
+          ports:
+            - containerPort: 3000
